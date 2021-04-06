@@ -1,5 +1,5 @@
 #!/bin/bash
-IMAGE_NAME="esp32-hmi"
+IMAGE_NAME="esp-hmi"
 IMAGE_VERSION="1.0.0"
 
 WORK_PATH=$(cd $(dirname $0); pwd)

@@ -7,8 +7,7 @@ echo "TEMP_PATH: ${TEMP_PATH}"
 sudo apt-get update
 
 if [ ! -d "${TEMP_PATH}" ]; then
-   mkdir ~/workspace/.tmp
-   mkdir ${TEMP_PATH}
+   mkdir -p ${TEMP_PATH}
 fi
 cd ${TEMP_PATH}
 if [ ! -d ".config" ]; then
