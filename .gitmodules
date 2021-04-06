@@ -1,0 +1,12 @@
+[submodule "tools/gdocker"]
+	path = tools/gdocker
+	url = https://github.com/xiongyumail/gdocker
+[submodule "tools/esp-idf"]
+	path = tools/esp-idf
+	url = https://github.com/espressif/esp-idf
+[submodule "projects/lcd_cam_loopback/components/lcd_cam"]
+	path = projects/lcd_cam_loopback/components/lcd_cam
+	url = https://github.com/xiongyumail/lcd_cam
+[submodule "projects/hmi/components/lcd_cam"]
+	path = projects/hmi/components/lcd_cam
+	url = https://github.com/xiongyumail/lcd_cam
