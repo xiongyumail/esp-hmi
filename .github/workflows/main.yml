@@ -39,15 +39,24 @@ jobs:
     - name: push image to server
       if: success()
       run: |
-        export PROJECT_PATH=$PWD
         IMAGE_NAME="esp-hmi"
         IMAGE_VERSION="1.0.0"
+        git config --remove-section http.https://github.com/
+        git config --remove-section gc
+        git fetch --unshallow
+        cd ..
+        mkdir -p esp-hmi-install
         if [[ "$(sudo docker images -q "${IMAGE_NAME}:${IMAGE_VERSION}" 2> /dev/null)" == "" ]]; then
           exit 1
         else
-          sudo docker save $(sudo docker images -q "${IMAGE_NAME}:${IMAGE_VERSION}" 2> /dev/null) > ${PROJECT_PATH}/tools/esp-hmi.tar
+          sudo docker save ${IMAGE_NAME}:${IMAGE_VERSION} > esp-hmi-install/esp-hmi.docker
         fi
-        cd ..
-        tar zcvf esp-hmi.tar.gz esp-hmi
-        scp -P $SERVER_PORT esp-hmi.tar.gz $SERVER_USER@$SERVER_HOST:$SERVER_OUTPUT_PATH
+        tar zcvf esp-hmi-install/esp-hmi.prpject esp-hmi
+        echo 'sudo docker load < esp-hmi.docker' >> esp-hmi-install/install.sh
+        echo 'sudo tar zxvf esp-hmi.project -C ../' >> esp-hmi-install/install.sh
+        echo 'sudo chown -R ${USER}:${USER} ../esp-hmi' >> esp-hmi-install/install.sh
+        echo "./install.sh" >> esp-hmi-install/README.md
+        sudo chmod +x esp-hmi-install/install.sh
+        tar zcvf esp-hmi-install.tar.gz esp-hmi-install
+        scp -P $SERVER_PORT esp-hmi-install.tar.gz $SERVER_USER@$SERVER_HOST:$SERVER_OUTPUT_PATH
         
