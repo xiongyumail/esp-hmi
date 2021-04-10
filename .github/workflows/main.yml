@@ -44,6 +44,7 @@ jobs:
         git config --remove-section http.https://github.com/
         git config --remove-section gc
         git fetch --unshallow
+        git submodule update --init --recursive
         cd ..
         mkdir -p esp-hmi-install
         if [[ "$(sudo docker images -q "${IMAGE_NAME}:${IMAGE_VERSION}" 2> /dev/null)" == "" ]]; then
@@ -51,7 +52,7 @@ jobs:
         else
           sudo docker save ${IMAGE_NAME}:${IMAGE_VERSION} > esp-hmi-install/esp-hmi.docker
         fi
-        tar zcvf esp-hmi-install/esp-hmi.prpject esp-hmi
+        tar zcvf esp-hmi-install/esp-hmi.project esp-hmi
         echo 'sudo docker load < esp-hmi.docker' >> esp-hmi-install/install.sh
         echo 'sudo tar zxvf esp-hmi.project -C ../' >> esp-hmi-install/install.sh
         echo 'sudo chown -R ${USER}:${USER} ../esp-hmi' >> esp-hmi-install/install.sh
