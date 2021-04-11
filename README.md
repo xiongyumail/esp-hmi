@@ -1,5 +1,7 @@
 # _ESP32-HMI_
 
+[![CI](https://github.com/xiongyumail/esp-hmi/actions/workflows/main.yml/badge.svg)](https://github.com/xiongyumail/esp-hmi/actions/workflows/main.yml)
+
 ## Contents
 
     * projects
