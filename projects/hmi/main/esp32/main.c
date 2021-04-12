@@ -2,8 +2,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <sys/unistd.h>
-#include <sys/stat.h>
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -12,16 +10,13 @@
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
-#include "esp_vfs_fat.h"
-#include "sdmmc_cmd.h"
-#include "driver/sdmmc_host.h"
 #include "ov2640.h"
 #include "ov3660.h"
 #include "sensor.h"
 #include "sccb.h"
 #include "driver/gpio.h"
 #include "lcd_cam.h"
-#include "st7796.h"
+#include "gc9a01.h"
 #include "jpeg.h"
 #include "config.h"
 #include "ft5x06.h"
@@ -29,12 +24,10 @@
 
 static const char *TAG = "main";
 
-#define MOUNT_POINT "/sdcard"
-
 #define CAM_JPEG_MODE   (0)
 
 lcd_cam_handle_t lcd_cam;
-st7796_handle_t st7796;
+gc9a01_handle_t gc9a01;
 static lv_disp_t *disp[1];
 static lv_disp_t *indev[1];
 
@@ -47,12 +40,12 @@ static void lv_disp_init(void)
             .width = LCD_BIT,
             .fre = LCD_FRE,
             .pin = {
-                .clk  = LCD_WR,
-                .data = {LCD_D0, LCD_D1, LCD_D2, LCD_D3, LCD_D4, LCD_D5, LCD_D6, LCD_D7},
+                .clk  = LCD_CLK,
+                .data = {LCD_MOSI},
             },
             .invert = {
                 .clk  = false,
-                .data = {false, false, false, false, false, false, false, false},
+                .data = {false},
             },
             .max_dma_buffer_size = 8 * 1024,
             .swap_data = true
@@ -88,7 +81,7 @@ static void lv_disp_init(void)
 
     lcd_cam_init(&lcd_cam, &lcd_cam_config);
 
-    st7796_config_t st7796_config = {
+    gc9a01_config_t gc9a01_config = {
         .width = LCD_BIT,
         .pin = {
             .dc  = LCD_DC,
@@ -104,14 +97,12 @@ static void lv_disp_init(void)
             .rst = false,
             .bk = false,
         },
-        .horizontal = 2, // 2: UP, 3： DOWN
+        .horizontal = 0, // 2: UP, 3： DOWN
         .dis_invert = true,
-        .dis_bgr = false,
+        .dis_bgr = true,
         .write_cb = lcd_cam.lcd.write_data,
     };
-    st7796_init(&st7796, &st7796_config);
-    SCCB_Init(I2C_SDA, I2C_SCL);
-    ft5x06_init();
+    gc9a01_init(&gc9a01, &gc9a01_config);
 }
 
 /* Flush the content of the internal buffer the specific area on the display
@@ -120,9 +111,9 @@ static void lv_disp_init(void)
 static void lv_disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     uint32_t len = (sizeof(uint16_t) * ((area->y2 - area->y1 + 1)*(area->x2 - area->x1 + 1)));
-    st7796.set_index(area->x1, area->y1, area->x2, area->y2);
+    gc9a01.set_index(area->x1, area->y1, area->x2, area->y2);
     lcd_cam.lcd.swap_data(false);
-    st7796.write_data((uint8_t *)color_p, len);
+    gc9a01.write_data((uint8_t *)color_p, len);
     lcd_cam.lcd.swap_data(true);
     lv_disp_flush_ready(disp_drv);
 }
@@ -130,11 +121,11 @@ static void lv_disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_c
 static bool lv_disp_input(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     static uint16_t x = 0, y = 0;
-    if (ft5x06_pos_read(&x, &y)) {
-        data->state = LV_INDEV_STATE_PR;
-    } else {
-        data->state =  LV_INDEV_STATE_REL;
-    }
+    // if (ft5x06_pos_read(&x, &y)) {
+    //     data->state = LV_INDEV_STATE_PR;
+    // } else {
+    //     data->state =  LV_INDEV_STATE_REL;
+    // }
     data->point.x = LV_HOR_RES_MAX - y;   
     data->point.y = x;
     return false; /*No buffering so no more data read*/
@@ -201,90 +192,7 @@ static void gui_task(void *arg)
     }
 }
 
-esp_err_t sd_init()
-{
-    esp_err_t ret;
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = true,
-        .max_files = 5,
-        .allocation_unit_size = 16 * 1024
-    };
-    sdmmc_card_t* card;
-    const char mount_point[] = MOUNT_POINT;
-    ESP_LOGI(TAG, "Initializing SD card");
-    ESP_LOGI(TAG, "Using SDMMC peripheral");
-
-    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-    // use 1-line SD mode
-    slot_config.width = 1;
-    slot_config.clk = 9;
-    slot_config.cmd = 20;
-    slot_config.d0 = 19;
-    ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
-
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(TAG, "Failed to mount filesystem. ");
-        } else {
-            ESP_LOGE(TAG, "Failed to initialize the card (%s). "
-                "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
-        }
-        return ret;
-    }
-
-    // Card has been initialized, print its properties
-    sdmmc_card_print_info(stdout, card);
-
-#if 0
-    ESP_LOGI(TAG, "Opening file");
-    FILE* f = fopen(MOUNT_POINT"/hello.txt", "w");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for writing");
-        return;
-    }
-    fprintf(f, "Hello %s!\n", card->cid.name);
-    fclose(f);
-    ESP_LOGI(TAG, "File written");
-
-    // Check if destination file exists before renaming
-    struct stat st;
-    if (stat(MOUNT_POINT"/foo.txt", &st) == 0) {
-        // Delete it if it exists
-        unlink(MOUNT_POINT"/foo.txt");
-    }
-
-    // Rename original file
-    ESP_LOGI(TAG, "Renaming file");
-    if (rename(MOUNT_POINT"/hello.txt", MOUNT_POINT"/foo.txt") != 0) {
-        ESP_LOGE(TAG, "Rename failed");
-        return;
-    }
-
-    // Open renamed file for reading
-    ESP_LOGI(TAG, "Reading file");
-    f = fopen(MOUNT_POINT"/foo.txt", "r");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for reading");
-        return;
-    }
-    char line[64];
-    fgets(line, sizeof(line), f);
-    fclose(f);
-    // strip newline
-    char* pos = strchr(line, '\n');
-    if (pos) {
-        *pos = '\0';
-    }
-    ESP_LOGI(TAG, "Read from file: '%s'", line);
-#endif
-
-    return ESP_OK;
-}
-
 void app_main() 
 {
-    sd_init();
-    
     xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
 }

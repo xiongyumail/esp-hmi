@@ -10,6 +10,16 @@ list(APPEND includes "gui"
                      "gui/generated"
                      "gui/generated/guider_fonts")
 
+if(IDF_TARGET STREQUAL "esp32")
+    list(APPEND srcs "esp32/main.c")
+    list(APPEND includes "esp32/include")
+endif()
+
+if(IDF_TARGET STREQUAL "esp32s2")
+    list(APPEND srcs "esp32s2/main.c")
+    list(APPEND includes "esp32s2/include")
+endif()
+
 if(IDF_TARGET STREQUAL "esp32s3")
     list(APPEND srcs "esp32s3/main.c")
     list(APPEND includes "esp32s3/include")

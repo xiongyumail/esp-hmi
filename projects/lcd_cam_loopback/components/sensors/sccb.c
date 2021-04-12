@@ -41,6 +41,7 @@ int SCCB_Init(int pin_sda, int pin_scl)
     conf.scl_io_num = pin_scl;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = SCCB_FREQ;
+    conf.clk_flags = 0;
 
     i2c_param_config(SCCB_I2C_PORT, &conf);
     i2c_driver_install(SCCB_I2C_PORT, conf.mode, 0, 0, 0);
