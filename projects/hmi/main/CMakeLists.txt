@@ -25,6 +25,11 @@ if(IDF_TARGET STREQUAL "esp32s3")
     list(APPEND includes "esp32s3/include")
 endif()
 
+if(IDF_TARGET STREQUAL "esp32c3")
+    list(APPEND srcs "esp32c3/main.c")
+    list(APPEND includes "esp32c3/include")
+endif()
+
 
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS ${includes}
