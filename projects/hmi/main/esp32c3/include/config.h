@@ -7,8 +7,8 @@ extern "C" {
 
 #define LCD_FRE   (80000000)
 #define LCD_BIT   (1)
-#define LCD_WIDTH (240)
-#define LCD_HIGH  (320)
+#define LCD_WIDTH (320)
+#define LCD_HIGH  (240)
 
 #define LCD_CLK   (GPIO_NUM_4)
 #define LCD_MOSI  (GPIO_NUM_5)

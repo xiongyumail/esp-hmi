@@ -15,21 +15,30 @@ extern "C" {
 typedef struct
 {
 	lv_obj_t *screen;
-	lv_obj_t *screen_btn0;
-	lv_obj_t *screen_btn0_label;
-	lv_obj_t *screen_btn1;
-	lv_obj_t *screen_btn1_label;
-	lv_obj_t *screen_btn2;
-	lv_obj_t *screen_btn2_label;
-	lv_obj_t *screen_label3;
-	lv_obj_t *screen_btn4;
-	lv_obj_t *screen_btn4_label;
-	lv_obj_t *screen_label5;
+	lv_obj_t *screen_cont8;
+	lv_obj_t *screen_doggie_1;
+	lv_obj_t *screen_clock_lable;
+	lv_obj_t *screen_header;
+	lv_obj_t *screen_heade_power;
+	lv_obj_t *screen_heade_net;
+	lv_obj_t *screen_heade_state;
+	lv_obj_t *screen_clock_s_lable;
+	lv_obj_t *screen_date;
+	lv_obj_t *screen_week;
+	lv_obj_t *screen_line10;
+	lv_obj_t *screen_line11;
+	lv_obj_t *screen_line10_12;
+	lv_obj_t *screen_line13;
+	lv_obj_t *screen_label14;
+	lv_obj_t *screen_label15;
+	lv_obj_t *screen_img16;
 }lv_ui;
 
 void setup_ui(lv_ui *ui);
 extern lv_ui guider_ui;
 void setup_scr_screen(lv_ui *ui);
+LV_IMG_DECLARE(_sun_alpha_64x64);
+LV_IMG_DECLARE(_doggie_1_alpha_100x100);
 
 #ifdef __cplusplus
 }

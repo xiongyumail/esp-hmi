@@ -68,7 +68,7 @@ static void lv_disp_init(void)
             .rst = false,
             .bk = false,
         },
-        .horizontal = 0, // 2: UP, 3： DOWN
+        .horizontal = 2, // 2: UP, 3： DOWN
         .dis_invert = true,
         .dis_bgr = false,
         .write_cb = lcd_cam.lcd.write_data,
