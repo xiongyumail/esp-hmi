@@ -23,7 +23,7 @@
 
 static const char *TAG = "main";
 
-#define LCD_RATE_TEST   (0)
+#define LCD_RATE_TEST   (1)
 #define LCD_TOUCH_TEST  (0)
 #define CAM_JPEG_MODE   (0)
 #define CAM_YUV_MODE    (0)
@@ -79,6 +79,8 @@ static void lcd_cam_task(void *arg)
 
     lcd_cam_init(&lcd_cam, &lcd_cam_config);
 
+    printf("test1\n");
+
     st7796_handle_t st7796;
     st7796_config_t st7796_config = {
         .width = LCD_BIT,
@@ -102,7 +104,7 @@ static void lcd_cam_task(void *arg)
         .write_cb = lcd_cam.lcd.write_data,
     };
     st7796_init(&st7796, &st7796_config);
-
+    printf("test2\n");
     uint8_t *img_buf = (uint8_t *)heap_caps_malloc(sizeof(uint16_t) * LCD_WIDTH * LCD_HIGH, MALLOC_CAP_SPIRAM);
 
     extern const uint8_t pic[];
