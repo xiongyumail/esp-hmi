@@ -77,7 +77,7 @@ typedef int16_t lv_coord_t;
  * The graphical objects and other related data are stored here. */
 
 /* 1: use custom malloc/free, 0: use the built-in `lv_mem_alloc` and `lv_mem_free` */
-#define LV_MEM_CUSTOM      0
+#define LV_MEM_CUSTOM      1
 #if LV_MEM_CUSTOM == 0
 /* Size of the memory used by `lv_mem_alloc` in bytes (>= 2kB)*/
 #  define LV_MEM_SIZE    (64U * 1024U)
@@ -93,7 +93,7 @@ typedef int16_t lv_coord_t;
 #  define LV_MEM_AUTO_DEFRAG  1
 #else       /*LV_MEM_CUSTOM*/
 #  define LV_MEM_CUSTOM_INCLUDE "esp_heap_caps.h"   /*Header for the dynamic memory function*/
-#  define LV_MEM_CUSTOM_ALLOC(s)   heap_caps_malloc(s, MALLOC_CAP_SPIRAM)       /*Wrapper to malloc*/
+#  define LV_MEM_CUSTOM_ALLOC(s)   heap_caps_malloc(s, MALLOC_CAP_INTERNAL)       /*Wrapper to malloc*/
 #  define LV_MEM_CUSTOM_FREE    free         /*Wrapper to free*/
 #endif     /*LV_MEM_CUSTOM*/
 
@@ -253,7 +253,7 @@ typedef void * lv_img_decoder_user_data_t;
 #define LV_BIG_ENDIAN_SYSTEM    0
 
 /* Define a custom attribute to `lv_tick_inc` function */
-#define LV_ATTRIBUTE_TICK_INC
+#define LV_ATTRIBUTE_TICK_INC IRAM_ATTR
 
 /* Define a custom attribute to `lv_task_handler` function */
 #define LV_ATTRIBUTE_TASK_HANDLER

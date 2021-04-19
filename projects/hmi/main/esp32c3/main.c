@@ -10,19 +10,14 @@
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
-#include "ov2640.h"
-#include "ov3660.h"
-#include "sensor.h"
-#include "sccb.h"
 #include "driver/gpio.h"
 #include "lcd_cam.h"
 #include "st7789.h"
-#include "jpeg.h"
 #include "config.h"
-#include "ft5x06.h"
 #include "gui.h"
 #include "esp_lua.h"
 #include "esp_lua_lib.h"
+#include "driver/timer.h"
 
 static const char *TAG = "main";
 
@@ -47,7 +42,7 @@ static void lv_disp_init(void)
                 .clk  = false,
                 .data = {false},
             },
-            .max_dma_buffer_size = 8 * 1024,
+            .max_dma_buffer_size = 2 * 1024,
             .swap_data = true
         },
     };
@@ -117,27 +112,51 @@ static void lv_memory_monitor(lv_task_t * param)
            heap_caps_get_free_size(MALLOC_CAP_INTERNAL), esp_get_free_heap_size());
 }
 
-static void lv_tick_task(void * arg)
+static bool IRAM_ATTR lv_tick_timer_isr_callback(void * arg)
 {
-    while(1) {
-        lv_tick_inc(10);
-        vTaskDelay(10 / portTICK_RATE_MS);
-    }
+    lv_tick_inc(10);
+
+    return 0;
+}
+
+static void lv_tick_timer_init(int group, int timer, bool auto_reload, int timer_interval_us)
+{
+    /* Select and initialize basic parameters of the timer */
+    timer_config_t config = {
+        .divider = 16,
+        .counter_dir = TIMER_COUNT_UP,
+        .counter_en = TIMER_PAUSE,
+        .alarm_en = TIMER_ALARM_EN,
+        .auto_reload = auto_reload,
+    }; // default clock source is APB
+    timer_init(group, timer, &config);
+
+    /* Timer's counter will initially start from value below.
+       Also, if auto_reload is set, this value will be automatically reload on alarm */
+    timer_set_counter_value(group, timer, 0);
+
+    /* Configure the alarm value and the interrupt on alarm. */
+    timer_set_alarm_value(group, timer, timer_interval_us * 5);
+    timer_enable_intr(group, timer);
+
+    timer_isr_callback_add(group, timer, lv_tick_timer_isr_callback, NULL, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM);
+
+    timer_start(group, timer);
 }
 
 static void gui_task(void *arg)
 {
-    xTaskCreate(lv_tick_task, "lv_tick_task", 1024, NULL, 5, NULL);
-
     lv_disp_init();
+
+    lv_tick_timer_init(TIMER_GROUP_0, TIMER_0, true, 10000);
 
     lv_init();
 
     static lv_disp_buf_t disp_buf;
     static lv_color_t *draw_buf_1 = NULL;
     static lv_color_t *draw_buf_2 = NULL;
-    draw_buf_1 = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * (LCD_WIDTH * LCD_HIGH / 2), MALLOC_CAP_INTERNAL); /*A screen sized buffer*/
-    lv_disp_buf_init(&disp_buf, draw_buf_1, NULL, LCD_WIDTH * LCD_HIGH / 2);   /*Initialize the display buffer*/
+    draw_buf_1 = (lv_color_t *)heap_caps_malloc(sizeof(lv_color_t) * (LCD_WIDTH * LCD_HIGH / 4), MALLOC_CAP_INTERNAL); /*A screen sized buffer*/
+    lv_disp_buf_init(&disp_buf, draw_buf_1, NULL, LCD_WIDTH * LCD_HIGH / 4);   /*Initialize the display buffer*/
 
     /*Create a display*/
     lv_disp_drv_t disp_drv;
@@ -165,6 +184,36 @@ static void gui_task(void *arg)
     }
 }
 
+static int lcd_write(lua_State *L) 
+{
+    int ret = -1;
+    char *io = luaL_checklstring(L, 1, NULL);
+
+    // ret = gui_write(io, luaL_checklstring(L, 2, NULL), 100 / portTICK_RATE_MS);
+
+    if (ret == 0) {
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
+}
+
+static const luaL_Reg lcd_lib[] = {
+    {"write", lcd_write},
+    {NULL, NULL}
+};
+
+LUAMOD_API int esp_lib_lcd(lua_State *L) 
+{
+    xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
+
+    luaL_newlib(L, lcd_lib);
+    lua_pushstring(L, "0.1.0");
+    lua_setfield(L, -2, "_version");
+    return 1;
+}
+
 static const luaL_Reg mylibs[] = {
     {"sys", esp_lib_sys},
     {"net", esp_lib_net},
@@ -172,6 +221,7 @@ static const luaL_Reg mylibs[] = {
     {"mqtt", esp_lib_mqtt},
     {"httpd", esp_lib_httpd},
     {"ramf", esp_lib_ramf},
+    {"lcd", esp_lib_lcd},
     {NULL, NULL}
 };
 
@@ -199,5 +249,4 @@ void app_main()
 {
     esp_log_level_set("*", ESP_LOG_ERROR);
     xTaskCreate(lua_task, "lua_task", 10240, NULL, 5, NULL);
-    xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
 }

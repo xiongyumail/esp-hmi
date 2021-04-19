@@ -4,7 +4,7 @@ wifi = require('wifi')
 
 print(dump.table(sys.info()))
 sys.delay(1000)
-if (not wifi.start_sta('esp-office-2.4G', '1qazxsw2')) then
+if (not wifi.start_sta('ziroom406', 'ziroomer002')) then
     print('Connect to AP and log in to http://192.168.1.1 and configure router information')
     wifi.start_ap('doggie_clock', '')
 else
