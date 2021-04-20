@@ -189,7 +189,14 @@ static int lcd_write(lua_State *L)
     int ret = -1;
     char *io = luaL_checklstring(L, 1, NULL);
 
-    // ret = gui_write(io, luaL_checklstring(L, 2, NULL), 100 / portTICK_RATE_MS);
+    if (strcmp(io, "SYS") == 0) {
+        if (strcmp(luaL_checklstring(L, 2, NULL), "open") == 0){
+            xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
+            ret = 0;
+        }
+    } else {
+        ret = gui_write(io, luaL_checklstring(L, 2, NULL), 100 / portTICK_RATE_MS);
+    }
 
     if (ret == 0) {
         lua_pushboolean(L, true);
