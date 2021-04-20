@@ -16,8 +16,9 @@ typedef struct {
 #define GUI_BATTERY_EVENT 1
 #define GUI_CLOCK_EVENT 2
 #define GUI_DATE_EVENT 3
-#define GUI_MSG_EVENT 4
-#define GUI_IMG_EVENT 5
+#define GUI_WEATHER_EVENT 4
+#define GUI_TEMP_EVENT 5
+#define GUI_IMG_EVENT 6
 
 static QueueHandle_t gui_event_queue = NULL;
 
@@ -36,66 +37,85 @@ static void gui_task(lv_task_t * arg)
         switch (e.event) {
             case GUI_WIFI_EVENT: {
                 if (atoi(text) == 1) {
-                    lv_label_set_text(guider_ui.screen_heade_net, LV_SYMBOL_WIFI);
+                    lv_label_set_text(guider_ui.screen_net, LV_SYMBOL_WIFI);
                 } else {
-                    lv_label_set_text(guider_ui.screen_heade_net, "");
+                    lv_label_set_text(guider_ui.screen_net, "");
                 } 
             }
             break;
 
             case GUI_CLOCK_EVENT: {
-                char clock[10];
+                char clock[16];
                 memcpy(clock, &text[0], 5);
                 clock[5] = '\0';
-                lv_label_set_text(guider_ui.screen_clock_lable, clock);
+                lv_label_set_text(guider_ui.screen_clock, clock);
                 memcpy(clock, &text[6], 2);
                 clock[2] = '\0';
-                lv_label_set_text(guider_ui.screen_clock_s_lable, clock);
+                lv_label_set_text(guider_ui.screen_clock_s, clock);
             }
             break;
 
             case GUI_DATE_EVENT: {
-                lv_label_set_text(guider_ui.screen_date, text);
+                char date[16];
+                sprintf(date, "%d年", atoi(&text[0]));
+                lv_label_set_text(guider_ui.screen_date_y, date);
+                sprintf(date, "%d月%d日", atoi(&text[5]), atoi(&text[8]));
+                lv_label_set_text(guider_ui.screen_date_md, date);
+                switch (atoi(&text[11])) {
+                    case 0: sprintf(date, "周日"); break;
+                    case 1: sprintf(date, "周一"); break;
+                    case 2: sprintf(date, "周二"); break;
+                    case 3: sprintf(date, "周三"); break;
+                    case 4: sprintf(date, "周四"); break;
+                    case 5: sprintf(date, "周五"); break;
+                    case 6: sprintf(date, "周六"); break;
+                }
+                lv_label_set_text(guider_ui.screen_date_w, date);
             }
             break;
 
             case GUI_BATTERY_EVENT: {
                 switch (atoi(text)) {
                     case BATTERY_FULL: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_BATTERY_FULL);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_BATTERY_FULL);
                     }
                     break;
 
                     case BATTERY_3: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_BATTERY_3);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_BATTERY_3);
                     }
                     break;
 
                     case BATTERY_2: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_BATTERY_2);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_BATTERY_2);
                     }
                     break;
 
                     case BATTERY_1: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_BATTERY_1);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_BATTERY_1);
                     }
                     break;
 
                     case BATTERY_EMPTY: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_BATTERY_EMPTY);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_BATTERY_EMPTY);
                     }
                     break;
 
                     case BATTERY_CHARGE: {
-                        lv_label_set_text(guider_ui.screen_heade_power, LV_SYMBOL_CHARGE);
+                        lv_label_set_text(guider_ui.screen_power, LV_SYMBOL_CHARGE);
                     }
                     break;
                 }
             }
             break;
 
-            case GUI_MSG_EVENT: {
-                // lv_label_set_text(message, text);
+            case GUI_WEATHER_EVENT: {
+                lv_label_set_text(guider_ui.screen_weather, text);
+            }
+            break;
+
+            case GUI_TEMP_EVENT: {
+                lv_label_set_text(guider_ui.screen_temp, text);
             }
             break;
 
@@ -151,8 +171,10 @@ int gui_write(char *io, char* str, int ticks_wait)
         event = GUI_CLOCK_EVENT;
     } else if (strcmp(io, "DATE") == 0) {
         event = GUI_DATE_EVENT;
-    } else if (strcmp(io, "MSG") == 0) {
-        event = GUI_MSG_EVENT;
+    } else if (strcmp(io, "WEATHER") == 0) {
+        event = GUI_WEATHER_EVENT;
+    } else if (strcmp(io, "TEMP") == 0) {
+        event = GUI_TEMP_EVENT;
     } else if (strcmp(io, "IMG") == 0) {
         event = GUI_IMG_EVENT;
     } else {

@@ -190,10 +190,7 @@ static int lcd_write(lua_State *L)
     char *io = luaL_checklstring(L, 1, NULL);
 
     if (strcmp(io, "SYS") == 0) {
-        if (strcmp(luaL_checklstring(L, 2, NULL), "open") == 0){
-            xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
-            ret = 0;
-        }
+        ret = 0;
     } else {
         ret = gui_write(io, luaL_checklstring(L, 2, NULL), 100 / portTICK_RATE_MS);
     }
@@ -213,8 +210,6 @@ static const luaL_Reg lcd_lib[] = {
 
 LUAMOD_API int esp_lib_lcd(lua_State *L) 
 {
-    xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
-
     luaL_newlib(L, lcd_lib);
     lua_pushstring(L, "0.1.0");
     lua_setfield(L, -2, "_version");
@@ -255,5 +250,6 @@ void lua_task(void *arg)
 void app_main() 
 {
     esp_log_level_set("*", ESP_LOG_ERROR);
+    xTaskCreate(gui_task, "gui_task", 8192, NULL, 5, NULL);
     xTaskCreate(lua_task, "lua_task", 10240, NULL, 5, NULL);
 }

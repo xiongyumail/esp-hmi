@@ -15,23 +15,25 @@ extern "C" {
 typedef struct
 {
 	lv_obj_t *screen;
-	lv_obj_t *screen_cont8;
-	lv_obj_t *screen_doggie_1;
-	lv_obj_t *screen_clock_lable;
+	lv_obj_t *screen_main_cont;
+	lv_obj_t *screen_image;
 	lv_obj_t *screen_header;
-	lv_obj_t *screen_heade_power;
-	lv_obj_t *screen_heade_net;
-	lv_obj_t *screen_heade_state;
-	lv_obj_t *screen_clock_s_lable;
-	lv_obj_t *screen_date;
-	lv_obj_t *screen_week;
+	lv_obj_t *screen_power;
+	lv_obj_t *screen_net;
+	lv_obj_t *screen_state;
+	lv_obj_t *screen_clock;
+	lv_obj_t *screen_clock_s;
+	lv_obj_t *screen_date_y;
+	lv_obj_t *screen_date_md;
+	lv_obj_t *screen_date_w;
+	lv_obj_t *screen_weather_image;
+	lv_obj_t *screen_weather;
+	lv_obj_t *screen_temp;
 	lv_obj_t *screen_line10;
 	lv_obj_t *screen_line11;
 	lv_obj_t *screen_line10_12;
-	lv_obj_t *screen_line13;
-	lv_obj_t *screen_label14;
-	lv_obj_t *screen_label15;
-	lv_obj_t *screen_img16;
+	lv_obj_t *screen_line11_17;
+	lv_obj_t *screen_line10_18;
 }lv_ui;
 
 void setup_ui(lv_ui *ui);

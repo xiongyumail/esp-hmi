@@ -7,8 +7,8 @@
     
     #include "lv_font.h"
     
-    LV_FONT_DECLARE(lv_font_Ni7seg_48)
-LV_FONT_DECLARE(lv_font_simsun_12)
+    LV_FONT_DECLARE(lv_font_simsun_12)
+LV_FONT_DECLARE(lv_font_Ni7seg_48)
 LV_FONT_DECLARE(lv_font_Ni7seg_22)
 LV_FONT_DECLARE(lv_font_simsun_16)
 
