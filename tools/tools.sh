@@ -5,6 +5,7 @@ echo "WORK_PATH: ${WORK_PATH}"
 echo "TEMP_PATH: ${TEMP_PATH}"
 
 sudo apt-get update
+sudo chown -R ${MY_NAME}:${MY_NAME} /home/${MY_NAME}/workspace
 
 if [ ! -d "${TEMP_PATH}" ]; then
    mkdir -p ${TEMP_PATH}
