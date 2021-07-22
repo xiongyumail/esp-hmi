@@ -20,12 +20,13 @@
 #include "sensor.h"
 #include "sccb.h"
 #include "driver/gpio.h"
-#include "lcd_cam.h"
-#include "st7796.h"
+#include "lcd.h"
+#include "st7796_rgb.h"
 #include "jpeg.h"
 #include "config.h"
 #include "ft5x06.h"
 #include "gui.h"
+#include "esp32s3/rom/cache.h"
 
 static const char *TAG = "main";
 
@@ -33,83 +34,69 @@ static const char *TAG = "main";
 
 #define CAM_JPEG_MODE   (0)
 
-lcd_cam_handle_t lcd_cam;
-st7796_handle_t st7796;
+lcd_handle_t lcd;
+st7796_rgb_handle_t st7796;
 static lv_disp_t *disp[1];
 static lv_disp_t *indev[1];
 
 /* Initialize your display and the required peripherals. */
 static void lv_disp_init(void)
 {
-    lcd_cam_config_t lcd_cam_config = {
-        .lcd = {
-            .en = true,
-            .width = LCD_BIT,
-            .fre = LCD_FRE,
-            .pin = {
-                .clk  = LCD_WR,
-                .data = {LCD_D0, LCD_D1, LCD_D2, LCD_D3, LCD_D4, LCD_D5, LCD_D6, LCD_D7},
-            },
-            .invert = {
-                .clk  = false,
-                .data = {false, false, false, false, false, false, false, false},
-            },
-            .max_dma_buffer_size = 8 * 1024,
-            .swap_data = true
-        },
-        .cam = {
-            .en = false,
-            .width = CAM_BIT,
-            .fre = CAM_FRE,
-            .pin = {
-                .xclk  = CAM_XCLK,
-                .pclk  = CAM_PCLK,
-                .vsync = CAM_VSYNC,
-                .href = CAM_HREF,
-                .data = {CAM_D0, CAM_D1, CAM_D2, CAM_D3, CAM_D4, CAM_D5, CAM_D6, CAM_D7},
-            },
-            .invert = {
-                .xclk  = false,
-                .pclk  = false,
-                .vsync = true,
-                .href = false,
-                .data = {false, false, false, false, false, false, false, false},
-            },
-            .mode.jpeg = CAM_JPEG_MODE,
-            .recv_size = CAM_WIDTH * CAM_HIGH * 2,
-            .max_dma_buffer_size = 16 * 1024,
-            .frame_cnt = 2, 
-            .frame_caps = MALLOC_CAP_SPIRAM,
-            .task_stack = 1024,
-            .task_pri = configMAX_PRIORITIES,
-            .swap_data = false
-        }
-    };
+    lcd_create(&lcd);
+    lcd.ctrl->bus.fre = LCD_FRE;
+    lcd.ctrl->bus.width = LCD_BIT;
+    lcd.ctrl->pin_clk.clk = LCD_WR;
+    lcd.ctrl->res.x = LCD_WIDTH;
+    lcd.ctrl->res.y = LCD_HIGH;
+    lcd.ctrl->pin_data[0].data = LCD_D0;
+    lcd.ctrl->pin_data[1].data = LCD_D1;
+    lcd.ctrl->pin_data[2].data = LCD_D2;
+    lcd.ctrl->pin_data[3].data = LCD_D3;
+    lcd.ctrl->pin_data[4].data = LCD_D4;
+    lcd.ctrl->pin_data[5].data = LCD_D5;
+    lcd.ctrl->pin_data[6].data = LCD_D6;
+    lcd.ctrl->pin_data[7].data = LCD_D7;
+    lcd.ctrl->ctr.swap_data = true;
+    lcd.ctrl->ctr.frame_buffer_num = 1;
+    lcd.ctrl->ctr.video_mode_en = 1;
+    lcd.ctrl->ctr.pix_bytes = 2;
+    
+    for (int x = 0; x < lcd.ctrl->ctr.frame_buffer_num; x++) {
+        lcd.ctrl->frame_buffer[x].addr = (uint8_t *)heap_caps_malloc(LCD_WIDTH * LCD_HIGH * sizeof(uint16_t), MALLOC_CAP_SPIRAM); // 保证字节对齐
+        if (lcd.ctrl->frame_buffer[x].addr == NULL) {
+            ESP_LOGE(TAG, "frame_buffer malloc fail!");
+            for (int x = 0; x < lcd.ctrl->ctr.frame_buffer_num; x++) {
+                free(lcd.ctrl->frame_buffer[x].addr);
+            }
+            lcd_remove(&lcd);
+            return;
+        }   
+    }
 
-    lcd_cam_init(&lcd_cam, &lcd_cam_config);
+    st7796_rgb_create(&st7796);
+    st7796.ctrl->bus.width = LCD_BIT;
+    st7796.ctrl->res.x = LCD_WIDTH;
+    st7796.ctrl->res.y = LCD_HIGH;
+    st7796.ctrl->pin_dc.dc = LCD_DC;
+    st7796.ctrl->pin_rd.rd = LCD_RD;
+    st7796.ctrl->pin_cs.cs = LCD_CS;
+    st7796.ctrl->pin_rst.rst = LCD_RST;
+    st7796.ctrl->pin_bk.bk = LCD_BK;
+    st7796.ctrl->ctr.horizontal = 2;
+    st7796.ctrl->ctr.dis_invert = true;
+    st7796.ctrl->ctr.dis_bgr = false;
+    st7796.ctrl->ctr.pix_bytes = 2;
 
-    st7796_config_t st7796_config = {
-        .width = LCD_BIT,
-        .pin = {
-            .dc  = LCD_DC,
-            .rd = LCD_RD,
-            .cs = LCD_CS,
-            .rst = LCD_RST,
-            .bk = LCD_BK,
-        },
-        .invert = {
-            .dc  = false,
-            .rd = false,
-            .cs = false,
-            .rst = false,
-            .bk = false,
-        },
-        .horizontal = 2, // 2: UP, 3： DOWN
-        .dis_invert = true,
-        .dis_bgr = false,
-        .write_cb = lcd_cam.lcd.write_data,
-    };
-    st7796_init(&st7796, &st7796_config);
+    lcd.port->m.data.start = st7796.port->s.data.start;
+    lcd.port->m.data.end = st7796.port->s.data.end;
+    lcd.port->m.fb.start = st7796.port->s.fb.start;
+    lcd.port->m.fb.end = st7796.port->s.fb.end;
+    st7796.port->m.data.write = lcd.port->s.data.write;
+    st7796.port->m.fb.write = lcd.port->s.fb.write;
+
+    lcd.port->s.ctr.run(&lcd);
+    st7796.port->s.ctr.run(&st7796);
+
     SCCB_Init(I2C_SDA, I2C_SCL);
     ft5x06_init();
 }
@@ -120,10 +107,27 @@ static void lv_disp_init(void)
 static void lv_disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p)
 {
     uint32_t len = (sizeof(uint16_t) * ((area->y2 - area->y1 + 1)*(area->x2 - area->x1 + 1)));
-    st7796.set_index(area->x1, area->y1, area->x2, area->y2);
-    lcd_cam.lcd.swap_data(false);
-    st7796.write_data((uint8_t *)color_p, len);
-    lcd_cam.lcd.swap_data(true);
+    // st7796.set_index(area->x1, area->y1, area->x2, area->y2);
+    // lcd_fb.lcd.swap_data(false);
+    // st7796.write_data((uint8_t *)color_p, len);
+    // lcd_fb.lcd.swap_data(true);
+
+    uint8_t * frame_buffer = lcd.ctrl->frame_buffer[0].addr;
+    int cnt = 0;
+    int index = 0;
+
+    cnt = 0;
+    for (int y = area->y1; y <= area->y2; y++) {
+        for (int x = area->x1; x <= area->x2; x++) {
+            index = (y * LCD_WIDTH + x) * 2 ;
+            frame_buffer[index + 0] = color_p[cnt].full >> 8;
+            frame_buffer[index + 1] = color_p[cnt].full & 0xFF;
+            cnt++;
+        }
+    }
+    // vTaskDelay(10 / portTICK_PERIOD_MS);
+    Cache_WriteBack_Addr(frame_buffer, 320 * 480 * 2);
+    
     lv_disp_flush_ready(disp_drv);
 }
 

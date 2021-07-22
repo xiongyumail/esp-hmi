@@ -10,7 +10,7 @@ extern "C" {
 #define LCD_WIDTH (480)
 #define LCD_HIGH  (320)
 
-#define CAM_FRE   (16000000)
+#define CAM_FRE   (20000000)
 #define CAM_BIT   (8)
 #define CAM_WIDTH (480)
 #define CAM_HIGH  (320)

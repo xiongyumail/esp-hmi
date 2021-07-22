@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#define LCD_FRE   (40000000)
+#define LCD_FRE   (20000000)
 #define LCD_BIT   (8)
 #define LCD_WIDTH (320)
 #define LCD_HIGH  (480)

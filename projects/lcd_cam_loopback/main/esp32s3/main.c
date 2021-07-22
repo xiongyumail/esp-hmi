@@ -20,10 +20,11 @@
 #include "jpeg.h"
 #include "config.h"
 #include "ft5x06.h"
+#include "esp32s3/spiram.h"
 
 static const char *TAG = "main";
 
-#define LCD_RATE_TEST   (0)
+#define LCD_RATE_TEST   (1)
 #define LCD_TOUCH_TEST  (0)
 #define CAM_JPEG_MODE   (0)
 #define CAM_YUV_MODE    (0)
@@ -45,7 +46,7 @@ static void lcd_cam_task(void *arg)
                 .clk  = false,
                 .data = {false, false, false, false, false, false, false, false},
             },
-            .max_dma_buffer_size = 32 * 1024,
+            .max_dma_buffer_size = LCD_WIDTH * LCD_HIGH * 2,
             .swap_data = true
         },
         .cam = {
@@ -69,7 +70,7 @@ static void lcd_cam_task(void *arg)
             .mode.jpeg = CAM_JPEG_MODE,
             .recv_size = CAM_WIDTH * CAM_HIGH * 2,
             .max_dma_buffer_size = 16 * 1024,
-            .frame_cnt = 2, 
+            .frame_cnt = 3, 
             .frame_caps = MALLOC_CAP_SPIRAM,
             .task_stack = 1024,
             .task_pri = configMAX_PRIORITIES,
@@ -104,6 +105,7 @@ static void lcd_cam_task(void *arg)
     st7796_init(&st7796, &st7796_config);
 
     uint8_t *img_buf = (uint8_t *)heap_caps_malloc(sizeof(uint16_t) * LCD_WIDTH * LCD_HIGH, MALLOC_CAP_SPIRAM);
+    printf("img_buf: 0x%x\n", (int)(img_buf));
 
     extern const uint8_t pic[];
     for (int y = 0; y < LCD_HIGH; y++) {
@@ -111,6 +113,7 @@ static void lcd_cam_task(void *arg)
             img_buf[y * (LCD_WIDTH * 2) + x] = pic[y * (800 * 2) + x];
         }  
     }
+    esp_spiram_writeback_cache();
     st7796.set_index(0, 0, LCD_WIDTH - 1, LCD_HIGH - 1);
     lcd_cam.lcd.swap_data(false);
     st7796.write_data((uint8_t *)img_buf, LCD_WIDTH * LCD_HIGH * 2);
@@ -193,10 +196,11 @@ static void lcd_cam_task(void *arg)
 #endif
         // totalX 变小，帧率提高
         // totalY 变小，帧率提高vsync 变短
-        sensor.set_res_raw(&sensor, 0, 0, 2079, 1547, 8, 2, 2000, 800, CAM_WIDTH, CAM_HIGH, true, true);
+        sensor.set_res_raw(&sensor, 64, 242, 2015, 1333, 8, 2, 2000, 600, CAM_WIDTH, CAM_HIGH, true, true);
         sensor.set_vflip(&sensor, 1);
         sensor.set_hmirror(&sensor, 1);
-        sensor.set_pll(&sensor, false, 15, 1, 0, false, 0, true, 5); // 39 fps
+        sensor.set_pll(&sensor, false, 16, 1, 0, false, 0, true, 5); // 39 fps
+        // sensor.set_colorbar(&sensor, 1);
     } else {
         ESP_LOGE(TAG, "sensor is temporarily not supported\n");
         goto fail;
