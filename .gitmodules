@@ -10,3 +10,6 @@
 [submodule "projects/hmi/components/lcd_cam"]
 	path = projects/hmi/components/lcd_cam
 	url = https://github.com/xiongyumail/lcd_cam
+[submodule "projects/rgb/components/lcd_cam"]
+	path = projects/rgb/components/lcd_cam
+	url = https://github.com/xiongyumail/lcd_cam
